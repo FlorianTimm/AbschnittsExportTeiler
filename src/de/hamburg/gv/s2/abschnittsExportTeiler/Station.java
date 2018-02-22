@@ -3,6 +3,7 @@ package de.hamburg.gv.s2.abschnittsExportTeiler;
 public class Station {
 	Abschnitt abs;
 	int vst = 0, bst;
+	boolean gedreht;
 
 	/**
 	 * Erzeugt eine Station
@@ -15,6 +16,13 @@ public class Station {
 		this.abs = abs;
 		setVST(vst);
 		setBST(bst);
+	}
+	
+	public Station(Abschnitt abs, int vst, int bst, boolean gedreht) {
+		this.abs = abs;
+		setVST(vst);
+		setBST(bst);
+		setDrehung(gedreht);
 	}
 
 	public Station(Abschnitt abs) {
@@ -37,6 +45,10 @@ public class Station {
 		} else {
 			this.bst = bst;
 		}
+	}
+	
+	public void setDrehung(boolean gedreht) {
+		this.gedreht = gedreht;
 	}
 
 	public Abschnitt getABS() {
@@ -64,6 +76,10 @@ public class Station {
 	
 	public void setABS(Abschnitt abs) {
 		this.abs = abs;
+	}
+	
+	public boolean getDrehung () {
+		return gedreht;
 	}
 
 }

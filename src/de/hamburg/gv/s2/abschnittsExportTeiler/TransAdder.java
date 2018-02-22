@@ -11,6 +11,7 @@ import java.util.ArrayList;
 
 import javax.swing.GroupLayout;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -20,11 +21,12 @@ public class TransAdder extends JDialog implements ActionListener, ItemListener,
 	
 	private static final long serialVersionUID = 1L;
 	Station[] station;
-	AbschnittsExportTeiler jframe;
+	AbschnittsExportTeilerGUI jframe;
 	JComboBox<Abschnitt> absAlt;
 	JTextField absAltL, vst1, bst1, nnk2, vnk2, vst2, bst2;
+	JCheckBox gedreht;
 
-	public TransAdder(AbschnittsExportTeiler jframe, ArrayList<Abschnitt> abschn) {
+	public TransAdder(AbschnittsExportTeilerGUI jframe, ArrayList<Abschnitt> abschn) {
 		super(jframe);
 		this.jframe = jframe;
 		station = new Station[2];
@@ -61,6 +63,9 @@ public class TransAdder extends JDialog implements ActionListener, ItemListener,
 		vst2 = new JTextField("0");
 		vst2.addKeyListener(this);
 		
+		JLabel LD = new JLabel("Drehung");
+		gedreht = new JCheckBox("gedreht");
+		
 		JLabel LBST2 = new JLabel("BST:");
 		bst2 = new JTextField("0");
 		//bst2.addKeyListener(this);
@@ -72,8 +77,8 @@ public class TransAdder extends JDialog implements ActionListener, ItemListener,
 		JButton jb = new JButton("hinzufügen");
 		jb.addActionListener(this);
 		{ // Spalten
-			GroupLayout.ParallelGroup s1 = layout.createParallelGroup().addComponent(Lalt).addComponent(LAbschnitt).addComponent(LVST1).addComponent(Lneu).addComponent(LVNK2).addComponent(LVST2);
-			GroupLayout.ParallelGroup s2 = layout.createParallelGroup().addComponent(absAlt).addComponent(vst1).addComponent(vnk2).addComponent(vst2);
+			GroupLayout.ParallelGroup s1 = layout.createParallelGroup().addComponent(Lalt).addComponent(LAbschnitt).addComponent(LVST1).addComponent(Lneu).addComponent(LVNK2).addComponent(LVST2).addComponent(LD);
+			GroupLayout.ParallelGroup s2 = layout.createParallelGroup().addComponent(absAlt).addComponent(vst1).addComponent(vnk2).addComponent(vst2).addComponent(gedreht);
 			GroupLayout.ParallelGroup s3 = layout.createParallelGroup().addComponent(LBST1).addComponent(LNNK2).addComponent(LBST2);
 			GroupLayout.ParallelGroup s4 = layout.createParallelGroup().addComponent(absAltL).addComponent(bst1).addComponent(nnk2).addComponent(bst2).addComponent(jb);
 			GroupLayout.SequentialGroup l2r = layout.createSequentialGroup().addGroup(s1).addGroup(s2).addGroup(s3).addGroup(s4);
@@ -86,8 +91,9 @@ public class TransAdder extends JDialog implements ActionListener, ItemListener,
 			GroupLayout.ParallelGroup r4 = layout.createParallelGroup().addComponent(Lneu);
 			GroupLayout.ParallelGroup r5 = layout.createParallelGroup().addComponent(LVNK2).addComponent(vnk2).addComponent(LNNK2).addComponent(nnk2);
 			GroupLayout.ParallelGroup r6 = layout.createParallelGroup().addComponent(LVST2).addComponent(vst2).addComponent(LBST2).addComponent(bst2);
-			GroupLayout.ParallelGroup r7 = layout.createParallelGroup().addComponent(jb);
-			GroupLayout.SequentialGroup t2b = layout.createSequentialGroup().addGroup(r1).addGroup(r2).addGroup(r3).addGroup(r4).addGroup(r5).addGroup(r6).addGroup(r7);
+			GroupLayout.ParallelGroup r7 = layout.createParallelGroup().addComponent(LD).addComponent(gedreht);
+			GroupLayout.ParallelGroup r8 = layout.createParallelGroup().addComponent(jb);
+			GroupLayout.SequentialGroup t2b = layout.createSequentialGroup().addGroup(r1).addGroup(r2).addGroup(r3).addGroup(r4).addGroup(r5).addGroup(r6).addGroup(r7).addGroup(r8);
 			layout.setVerticalGroup(t2b);
 		}
 
@@ -103,18 +109,26 @@ public class TransAdder extends JDialog implements ActionListener, ItemListener,
 	public void actionPerformed(ActionEvent arg0) {
 		// TODO Auto-generated method stub
 		station[0] = pruefeEingabe((Abschnitt) absAlt.getSelectedItem(), vst1.getText(), bst1.getText());
-		station[1] = pruefeEingabe(vnk2.getText(), nnk2.getText(), vst2.getText(), bst2.getText());
+		station[1] = pruefeEingabe(vnk2.getText(), nnk2.getText(), vst2.getText(), bst2.getText(), gedreht.isSelected());
 		jframe.addTransBack(station);
 	}
+	
+	public static Station pruefeEingabe(String vnk, String nnk, String vst, String bst) throws NumberFormatException {
+		return pruefeEingabe(vnk, nnk, vst, bst, false);
+	}
 
-	public static Station pruefeEingabe(String vnk, String nnk, String vst, String bst) {
+	public static Station pruefeEingabe(String vnk, String nnk, String vst, String bst, boolean gedreht) throws NumberFormatException {
 		Abschnitt abschnitt = new Abschnitt();
 		abschnitt.setVNK(vnk);
 		abschnitt.setNNK(nnk);
-		return pruefeEingabe(abschnitt, vst, bst);
+		return pruefeEingabe(abschnitt, vst, bst, gedreht);
 	}
 
 	public static Station pruefeEingabe(Abschnitt abschnitt, String vst, String bst) throws NumberFormatException {
+		return pruefeEingabe(abschnitt, vst, bst, false);
+	}
+	
+	public static Station pruefeEingabe(Abschnitt abschnitt, String vst, String bst, boolean gedreht) throws NumberFormatException {
 		Station station = new Station(abschnitt);
 		try {
 			int newVst = Integer.parseInt(vst);
@@ -128,6 +142,7 @@ public class TransAdder extends JDialog implements ActionListener, ItemListener,
 		} catch (Exception e) {
 			
 		}
+		station.setDrehung(gedreht);
 		return station;
 	}
 

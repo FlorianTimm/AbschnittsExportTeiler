@@ -8,7 +8,7 @@ import javax.swing.table.AbstractTableModel;
 public class TransTabelle extends AbstractTableModel {
 	private static final long serialVersionUID = 1L;
 	ArrayList<Station[]> trans;
-	String[] spalten = { "VNK", "NNK", "VST", "BST", "VNK", "NNK", "VST", "BST" };
+	String[] spalten = { "VNK", "NNK", "VST", "BST", "VNK", "NNK", "VST", "BST", "\u21C4" };
 
 	public TransTabelle(ArrayList<Station[]> trans) {
 		this.trans = trans;
@@ -18,7 +18,7 @@ public class TransTabelle extends AbstractTableModel {
 	@Override
 	public int getColumnCount() {
 		// TODO Auto-generated method stub
-		return 8;
+		return 9;
 	}
 
 	@Override
@@ -50,6 +50,8 @@ public class TransTabelle extends AbstractTableModel {
 			return st[1].getVST();
 		case 7:
 			return st[1].getBST();
+		case 8:
+			return st[1].getDrehung();
 		}
 
 		return null;
@@ -77,9 +79,20 @@ public class TransTabelle extends AbstractTableModel {
 			return true;
 		case 7:
 			return true;
+		case 8:
+			return true;
 		}
 		return false;
 	}
+	
+	// Hier kann man die Klasse für eine Spalte ändern.
+    @Override
+    public Class<?> getColumnClass(int column) {
+        if(column == 8){
+            return Boolean.class;
+        }
+        return super.getColumnClass(column);
+    }
 
 	public void setValueAt(Object value, int row, int column) {
 		if (!(getValueAt(row, column).equals(value))) {
@@ -110,6 +123,9 @@ public class TransTabelle extends AbstractTableModel {
 					break;
 				case 7:
 					st[1].setBST(Integer.valueOf((String) value));
+					break;
+				case 8:
+					st[1].setDrehung((boolean) value);
 					break;
 				}
 				trans.set(row, st);
