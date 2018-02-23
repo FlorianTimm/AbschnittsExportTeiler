@@ -271,7 +271,7 @@ public class AbschnittsExportTeilerGUI extends JFrame implements ActionListener 
 				BufferedReader in = new BufferedReader(new FileReader(jfc.getSelectedFile()));
 
 				String line = "";
-				while ((line = in.readLine()) != null) {
+				while ((line = in.readLine()) != null && line.length() >= 15) {
 					System.out.println(line);
 					String[] input = line.split("\t");
 					Station[] st = new Station[2];
