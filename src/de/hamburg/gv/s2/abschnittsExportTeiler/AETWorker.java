@@ -244,7 +244,7 @@ public class AETWorker {
 						}
 					} else if (dbab_alt.containsKey(key2)) {
 						// System.out.println("3");
-						if (len > (double) dbab_alt.get(key2)[2]) {
+						if (((BigDecimal) dbab_alt.get(key2)[2]).compareTo(new BigDecimal(len)) == -1 ) {
 							Object[] ch = dbab_alt.get(key2);
 							ch[2] = len;
 							dbab_neu.put(key2, ch);
