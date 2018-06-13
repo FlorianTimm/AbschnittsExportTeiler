@@ -4,5 +4,6 @@
 	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
 	<classpathentry kind="lib" path="G:/AG_Verkehrsdaten/DV-System/Eigenentwicklungen/Java-Programme/_Bibliotheken/javadbf.jar"/>
 	<classpathentry kind="lib" path="G:/AG_Verkehrsdaten/DV-System/Eigenentwicklungen/Java-Programme/_Bibliotheken/sqlite-jdbc-3.19.3.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/_allgemeineKlassen"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -7,21 +7,10 @@ import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.geom.AffineTransform;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.regex.Pattern;
-
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -33,41 +22,38 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
-import com.linuxense.javadbf.DBFException;
-import com.linuxense.javadbf.DBFReader;
+import de.hamburg.gv.s2.ChangeSet;
+import de.hamburg.gv.s2.ChangeSetDBListener;
 
 /**
  * @author Florian Timm
  *
  */
-public class AbschnittsExportTeilerGUI extends JFrame implements ActionListener {
+public class AetGUI extends JFrame implements ActionListener, AetListener, KeyListener, ChangeSetDBListener {
 	private static final long serialVersionUID = 1L;
 
-	File dbabschnF = null;
-	File[] dateien = null, dateienS = null;
-	JTextArea jta;
-	JTable transTable;
-	JTextField jtf;
-	JButton trans, export, loeschen, importT, exportT;
-	ArrayList<Abschnitt> abschn;
-	ArrayList<Station[]> zuAendern;
-	TransTabelle transTableModell;
+	private JTextArea jta;
+	private JTable transTable;
+	private JTextField jtf;
+	private JButton trans, export, loeschen, importT, exportT, importDB;
+	private AetKontrolle kontroll;
 
 	public static void main(String[] args) {
-		new AbschnittsExportTeilerGUI();
+		new AetGUI();
 	}
 
-	public AbschnittsExportTeilerGUI() {
+	public AetGUI() {
 		super("AbschnittsExportTeiler");
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		} catch (Exception e) {
 		}
+
+		kontroll = new AetKontrolle(this);
+		kontroll.getChangeSetDB().setListener(this);
+
 		this.setPreferredSize(new Dimension(600, 400));
 		this.setLocationRelativeTo(null);
-
-		abschn = new ArrayList<Abschnitt>();
-		zuAendern = new ArrayList<Station[]>();
 
 		Container cp = this.getContentPane();
 		cp.setLayout(new GridLayout(2, 1));
@@ -106,24 +92,46 @@ public class AbschnittsExportTeilerGUI extends JFrame implements ActionListener 
 		trans.setEnabled(false);
 		unten.add(trans, BorderLayout.NORTH);
 
-		transTableModell = new TransTabelle(zuAendern);
-		transTable = new JTable(transTableModell);
+		transTable = new JTable(kontroll.getTableModell());
 		JScrollPane jsp2 = new JScrollPane(transTable);
 		unten.add(jsp2, BorderLayout.CENTER);
+		
+		
+	
+		
+		JPanel rechtsPanel = new JPanel();
+		rechtsPanel.setLayout(new GridLayout(2, 1));
+		unten.add(rechtsPanel, BorderLayout.EAST);
+		
+		exportT = new JButton("export");
+		Font lvButtonFont = exportT.getFont();
+		AffineTransform at = new AffineTransform();
+		at.rotate(-1.57d);	
+		exportT.setActionCommand("exportT");
+		exportT.addActionListener(this);
+		exportT.setFont(lvButtonFont.deriveFont(at));
+		exportT.setVerticalAlignment(SwingConstants.BOTTOM);
+		exportT.setEnabled(false);
+		rechtsPanel.add(exportT);
 
 		loeschen = new JButton("löschen");
 		loeschen.addActionListener(this);
-		Font lvButtonFont = loeschen.getFont();
-		AffineTransform at = new AffineTransform();
-		at.rotate(-1.57d);
 		loeschen.setFont(lvButtonFont.deriveFont(at));
 		loeschen.setVerticalAlignment(SwingConstants.BOTTOM);
 		loeschen.setEnabled(false);
-		unten.add(loeschen, BorderLayout.EAST);
+		rechtsPanel.add(loeschen);
 
 		JPanel imexportT = new JPanel();
 		imexportT.setLayout(new GridLayout(2, 1));
 		unten.add(imexportT, BorderLayout.WEST);
+		
+		importDB = new JButton("...von DB");
+		importDB.setActionCommand("importDB");
+		importDB.addActionListener(this);
+		importDB.setFont(lvButtonFont.deriveFont(at));
+		importDB.setVerticalAlignment(SwingConstants.BOTTOM);
+		importDB.setEnabled(false);
+		imexportT.add(importDB);
 
 		importT = new JButton("import");
 		importT.setActionCommand("importT");
@@ -132,14 +140,6 @@ public class AbschnittsExportTeilerGUI extends JFrame implements ActionListener 
 		importT.setVerticalAlignment(SwingConstants.BOTTOM);
 		importT.setEnabled(false);
 		imexportT.add(importT);
-
-		exportT = new JButton("export");
-		exportT.setActionCommand("exportT");
-		exportT.addActionListener(this);
-		exportT.setFont(lvButtonFont.deriveFont(at));
-		exportT.setVerticalAlignment(SwingConstants.BOTTOM);
-		exportT.setEnabled(false);
-		imexportT.add(exportT);
 
 		export = new JButton("Export");
 		export.setActionCommand("export");
@@ -158,8 +158,7 @@ public class AbschnittsExportTeilerGUI extends JFrame implements ActionListener 
 	 * 
 	 * @return Erfolgreich?
 	 */
-	public boolean importFolder() {
-
+	public void importFolder() {
 		JFileChooser jfc = new JFileChooser("D:\\TTSIB\\ESS");
 		jfc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 		jfc.setAcceptAllFileFilterUsed(false);
@@ -167,193 +166,9 @@ public class AbschnittsExportTeilerGUI extends JFrame implements ActionListener 
 
 		if (ok == JFileChooser.APPROVE_OPTION) {
 			jta.setText("");
-
-			dateien = jfc.getSelectedFile().listFiles(new FilenameFilter() {
-				@Override
-				public boolean accept(File dir, String name) {
-					return Pattern.matches("(DB)\\d{6}\\.((DBF)|(dbf))", name);
-				}
-			});
-
-			dateienS = jfc.getSelectedFile().listFiles(new FilenameFilter() {
-				@Override
-				public boolean accept(File dir, String name) {
-					return Pattern.matches("(DB)((OBJDEF)|(OBJEKT))\\.((DBF)|(dbf))", name);
-				}
-			});
-
-			dbabschnF = new File(jfc.getSelectedFile() + "\\DBABSCHN.DBF");
-			if (dbabschnF.exists()) {
-				abschn.clear();
-				try {
-					DBFReader dbabschn = new DBFReader(new FileInputStream(dbabschnF));
-
-					Object[] spalten;
-
-					while ((spalten = dbabschn.nextRecord()) != null) {
-						if (spalten.length >= 3 && spalten[0] != null && spalten[1] != null && spalten[2] != null) {
-							BigDecimal bd = (BigDecimal) spalten[2];
-							Abschnitt abs = new Abschnitt((String) spalten[0], (String) spalten[1],
-									(int) bd.intValueExact());
-							abschn.add(abs);
-							// System.out.println(abs.toString());
-						}
-					}
-					Collections.sort(abschn);
-					trans.setEnabled(true);
-					export.setEnabled(true);
-					importT.setEnabled(true);
-					exportT.setEnabled(true);
-					dbabschn.close();
-
-				} catch (DBFException e1) {
-					e1.printStackTrace();
-				} catch (FileNotFoundException e1) {
-					e1.printStackTrace();
-				}
-
-				for (int i = 0; i < dateien.length; i++) {
-
-					File file = dateien[i];
-
-					if (i > 0) {
-						jta.append("\n");
-					}
-					jta.append(file.getName());
-					System.out.println(file.getName());
-
-				}
-				for (File datei : dateienS) {
-					System.out.println(datei.getName());
-					jta.append("\n" + datei.getName());
-				}
-			} else {
-				JOptionPane.showMessageDialog(this,
-						"Der Ordner enthält keine DBABSCHNITT, die Import-Daten sind ungültig!");
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	/**
-	 * Wählt den Export-Ordner
-	 * 
-	 * @return erfolgreich?
-	 */
-	public boolean exportFolder() {
-		JFileChooser jfc = new JFileChooser("D:\\TTSIB\\ESS");
-		jfc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-		jfc.setAcceptAllFileFilterUsed(false);
-		int ok = jfc.showOpenDialog(this);
-
-		if (ok == JFileChooser.APPROVE_OPTION) {
-			jtf.setText(jfc.getSelectedFile().getAbsolutePath());
-			return true;
-		}
-		return false;
-	}
-
-	public void addTrans() {
-		new TransAdder(this, abschn);
-	}
-
-	public void importTrans() {
-		JFileChooser jfc = new JFileChooser();
-		jfc.setFileSelectionMode(JFileChooser.FILES_ONLY);
-		int ok = jfc.showOpenDialog(this);
-
-		if (ok == JFileChooser.APPROVE_OPTION) {
-			jfc.getSelectedFile();
-			System.out.println(jfc.getSelectedFile());
-			try {
-				BufferedReader in = new BufferedReader(new FileReader(jfc.getSelectedFile()));
-
-				String line = "";
-				while ((line = in.readLine()) != null && line.length() >= 15) {
-					System.out.println(line);
-					String[] input = line.split("\t");
-					Station[] st = new Station[2];
-					st[0] = TransAdder.pruefeEingabe(input[0], input[1], input[2], input[3]);
-					if (input.length == 8) {
-					
-					st[1] = TransAdder.pruefeEingabe(input[4], input[5], input[6], input[7]);
-					} else if (input.length == 9) {
-						st[1] = TransAdder.pruefeEingabe(input[4], input[5], input[6], input[7], Boolean.valueOf(input[8]));
-					}
-					zuAendern.add(st);
-				}
-				in.close();
-			} catch (IOException e) {
-				System.err.println("cat: Fehler beim Verarbeiten");
-			}
-		}
-		transTableModell = new TransTabelle(zuAendern);
-		transTable.setModel(transTableModell);
-		// jta2.append(text);
-		loeschen.setEnabled(true);
-	}
-	
-	public void export() {
-		AETWorker w = new AETWorker(this);
-		File exportF = new File(jtf.getText());
-		w.export(exportF, dateienS,zuAendern, dateien, dbabschnF);
-	}
-
-	public void exportTrans() {
-		String text = "";
-		for (Station[] station : zuAendern) {
-			text += station[0].getABS().getVNK() + "\t";
-			text += station[0].getABS().getNNK() + "\t";
-			text += station[0].getVST() + "\t";
-			text += station[0].getBST() + "\t";
-			text += station[1].getABS().getVNK() + "\t";
-			text += station[1].getABS().getNNK() + "\t";
-			text += station[1].getVST() + "\t";
-			text += station[1].getBST() + "\t";
-			text += station[1].getDrehung() + "\n\r";
-		}
-		JFileChooser jfc = new JFileChooser();
-		jfc.setFileSelectionMode(JFileChooser.FILES_ONLY);
-		int ok = jfc.showSaveDialog(this);
-
-		if (ok == JFileChooser.APPROVE_OPTION) {
-			System.out.println(jfc.getSelectedFile());
-			BufferedWriter writer = null;
-			try {
-				writer = new BufferedWriter(new FileWriter(jfc.getSelectedFile()));
-				writer.write(text);
-
-			} catch (IOException e) {
-			} finally {
-				try {
-					if (writer != null)
-						writer.close();
-				} catch (IOException e) {
-				}
-			}
+			kontroll.setFolder(jfc.getSelectedFile());
 		}
 	}
-
-	public void addTransBack(Station[] station) {
-		if (station.length == 2) {
-			zuAendern.add(station.clone());
-			/*
-			 * String text = ""; for (Station st : station) { text +=
-			 * st.getABS().getVNK() + "\t"; text += st.getABS().getNNK() + "\t";
-			 * text += st.getVST() + "\t"; text += st.getBST() + "\t"; } text =
-			 * text.substring(0, text.length() - 2) + "\n";
-			 */
-			transTableModell = new TransTabelle(zuAendern);
-			transTable.setModel(transTableModell);
-			// jta2.append(text);
-			loeschen.setEnabled(true);
-		}
-	}
-
-
-	
 
 	@Override
 	public void actionPerformed(ActionEvent ae) {
@@ -363,7 +178,7 @@ public class AbschnittsExportTeilerGUI extends JFrame implements ActionListener 
 			break;
 
 		case "speichern":
-			exportFolder();
+			selectExportFolder();
 			break;
 
 		case "trans":
@@ -375,40 +190,127 @@ public class AbschnittsExportTeilerGUI extends JFrame implements ActionListener 
 			break;
 
 		case "exportT":
-			exportTrans();
+			exportChangeSets();
 			break;
 
 		case "export":
-			if (jtf.getText().equals("") || !dbabschnF.exists()) {
-				JOptionPane.showMessageDialog(null,
-						"Es sind noch keine gültigen Eingabe- und/oder Ausgabeordner gewählt!");
+			if (!kontroll.check()) {
+				showMessage("Es sind noch keine gültigen Eingabe- und/oder Ausgabeordner gewählt!");
 			} else {
-				export();
+				kontroll.export();
 			}
 			break;
 
 		case "löschen":
-			transLoeschen();
+			deleteChangeSet();
 			break;
 		}
 	}
 
-	private void transLoeschen() {
+	public void importTrans() {
+		JFileChooser jfc = new JFileChooser();
+		jfc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+		int ok = jfc.showOpenDialog(this);
+
+		if (ok == JFileChooser.APPROVE_OPTION) {
+			kontroll.getChangeSetDB().importFromFile(jfc.getSelectedFile());
+		}
+	}
+
+	public void exportChangeSets() {
+		JFileChooser jfc = new JFileChooser();
+		jfc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+		int ok = jfc.showSaveDialog(this);
+
+		if (ok == JFileChooser.APPROVE_OPTION) {
+			System.out.println(jfc.getSelectedFile());
+			jfc.getSelectedFile();
+		}
+	}
+
+	private void deleteChangeSet() {
 		int[] select = transTable.getSelectedRows();
 		if (select.length > 0) {
 			int result = JOptionPane.showConfirmDialog(null, "Möchten Sie die Daten wirklich löschen?", "Zeile löschen",
 					JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 			if (result == JOptionPane.OK_OPTION) {
 				for (int i = select.length - 1; i >= 0; i--) {
-					zuAendern.remove(select[i]);
+					kontroll.getChangeSetDB().remove(select[i]);
 				}
 			}
-			transTableModell = new TransTabelle(zuAendern);
-			transTable.setModel(transTableModell);
 		}
 	}
 
 	public void log(Exception e) {
 		e.printStackTrace();
 	}
+
+	@Override
+	public void showTextLine(String zeile) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void activateButtons() {
+		trans.setEnabled(true);
+		export.setEnabled(true);
+		importT.setEnabled(true);
+		exportT.setEnabled(true);
+		//importDB.setEnabled(true);
+	}
+
+	@Override
+	public void showMessage(String text) {
+		JOptionPane.showMessageDialog(this, text);
+	}
+
+	public void addTrans() {
+		new ChangeSetChooser(this, kontroll);
+	}
+
+	/**
+	 * Wählt den Export-Ordner
+	 * 
+	 * @return erfolgreich?
+	 */
+	public void selectExportFolder() {
+		JFileChooser jfc = new JFileChooser("D:\\TTSIB\\ESS");
+		jfc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		jfc.setAcceptAllFileFilterUsed(false);
+		int ok = jfc.showOpenDialog(this);
+
+		if (ok == JFileChooser.APPROVE_OPTION) {
+			jtf.setText(jfc.getSelectedFile().getAbsolutePath());
+			kontroll.setExportFolder(jfc.getSelectedFile());
+		}
+
+	}
+
+	public void addChangeLog(ChangeSet changeset) {
+		kontroll.getChangeSetDB().addSimple(changeset);
+	}
+
+	public void changeSetsChanged() {
+		transTable.setModel(kontroll.getTableModell());
+		loeschen.setEnabled(kontroll.getChangeSetDB().size() > 0);
+	}
+
+	@Override
+	public void keyPressed(KeyEvent arg0) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void keyReleased(KeyEvent arg0) {
+		File exportFolder = new File(jtf.getText());
+		kontroll.setExportFolder(exportFolder);
+	}
+
+	@Override
+	public void keyTyped(KeyEvent arg0) {
+		// TODO Auto-generated method stub
+
+	}
+
 }

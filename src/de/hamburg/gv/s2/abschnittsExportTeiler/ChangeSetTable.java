@@ -1,29 +1,29 @@
 package de.hamburg.gv.s2.abschnittsExportTeiler;
 
-import java.util.ArrayList;
-
 import javax.swing.JOptionPane;
 import javax.swing.table.AbstractTableModel;
 
-public class TransTabelle extends AbstractTableModel {
-	private static final long serialVersionUID = 1L;
-	ArrayList<Station[]> trans;
-	String[] spalten = { "VNK", "NNK", "VST", "BST", "VNK", "NNK", "VST", "BST", "\u21C4" };
+import de.hamburg.gv.s2.Abschnitt;
+import de.hamburg.gv.s2.ChangeSet;
+import de.hamburg.gv.s2.ChangeSetDB;
 
-	public TransTabelle(ArrayList<Station[]> trans) {
+public class ChangeSetTable extends AbstractTableModel {
+	private static final long serialVersionUID = 1L;
+	private ChangeSetDB trans;
+	private String[] spalten = { "VNK", "NNK", "VST", "BST", "VNK", "NNK", "VST", "BST", "\u21C4" };
+
+	public ChangeSetTable(ChangeSetDB trans) {
 		this.trans = trans;
 
 	}
 
 	@Override
 	public int getColumnCount() {
-		// TODO Auto-generated method stub
 		return 9;
 	}
 
 	@Override
 	public int getRowCount() {
-		// TODO Auto-generated method stub
 		return trans.size();
 	}
 
@@ -31,27 +31,43 @@ public class TransTabelle extends AbstractTableModel {
 	public Object getValueAt(int reihe, int spalte) {
 		// TODO Auto-generated method stub
 
-		Station[] st = trans.get(reihe);
+		ChangeSet cs = trans.get(reihe);
 
 		switch (spalte) {
 		case 0:
-			return st[0].getABS().getVNK();
+			if (cs.getAlt() == null || cs.getAlt().getABS() == null)
+				return null;
+			return cs.getAlt().getABS().getVNK();
 		case 1:
-			return st[0].getABS().getNNK();
+			if (cs.getAlt() == null || cs.getAlt().getABS() == null)
+				return null;
+			return cs.getAlt().getABS().getNNK();
 		case 2:
-			return st[0].getVST();
+			if (cs.getAlt() == null)
+				return null;
+			return cs.getAlt().getVST();
 		case 3:
-			return st[0].getBST();
+			if (cs.getAlt() == null )
+				return null;
+			return cs.getAlt().getBST();
 		case 4:
-			return st[1].getABS().getVNK();
+			if (cs.getNeu() == null || cs.getNeu().getABS() == null)
+				return null;
+			return cs.getNeu().getABS().getVNK();
 		case 5:
-			return st[1].getABS().getNNK();
+			if (cs.getNeu() == null || cs.getNeu().getABS() == null)
+				return null;
+			return cs.getNeu().getABS().getNNK();
 		case 6:
-			return st[1].getVST();
+			if (cs.getNeu() == null )
+				return null;
+			return cs.getNeu().getVST();
 		case 7:
-			return st[1].getBST();
+			if (cs.getNeu() == null )
+				return null;
+			return cs.getNeu().getBST();
 		case 8:
-			return st[1].getDrehung();
+			return cs.isGedreht();
 		}
 
 		return null;
@@ -100,35 +116,35 @@ public class TransTabelle extends AbstractTableModel {
 					JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 			if (result == JOptionPane.OK_OPTION) {
 
-				Station[] st = trans.get(row);
+				ChangeSet cs = trans.get(row);
 				switch (column) {
 				case 2:
-					st[0].setVST(Integer.valueOf((String) value));
+					cs.getAlt().setVST(Integer.valueOf((String) value));
 					break;
 				case 3:
-					st[0].setBST(Integer.valueOf((String) value));
+					cs.getAlt().setBST(Integer.valueOf((String) value));
 					break;
 				case 4:
-					Abschnitt abs = st[1].getABS();
+					Abschnitt abs = cs.getNeu().getABS();
 					abs.setVNK((String) value);
-					st[1].setABS(abs);
+					cs.getNeu().setABS(abs);
 					break;
 				case 5:
-					Abschnitt abs2 = st[1].getABS();
+					Abschnitt abs2 = cs.getNeu().getABS();
 					abs2.setNNK((String) value);
-					st[1].setABS(abs2);
+					cs.getNeu().setABS(abs2);
 					break;
 				case 6:
-					st[1].setVST(Integer.valueOf((String) value));
+					cs.getNeu().setVST(Integer.valueOf((String) value));
 					break;
 				case 7:
-					st[1].setBST(Integer.valueOf((String) value));
+					cs.getNeu().setBST(Integer.valueOf((String) value));
 					break;
 				case 8:
-					st[1].setDrehung((boolean) value);
+					cs.setGedreht((boolean) value);
 					break;
 				}
-				trans.set(row, st);
+				trans.set(row, cs);
 
 			}
 		}

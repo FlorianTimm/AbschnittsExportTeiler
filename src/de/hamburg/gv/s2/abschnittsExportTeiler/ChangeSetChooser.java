@@ -7,8 +7,6 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.util.ArrayList;
-
 import javax.swing.GroupLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -17,19 +15,22 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 
-public class TransAdder extends JDialog implements ActionListener, ItemListener, KeyListener {
+import de.hamburg.gv.s2.Abschnitt;
+import de.hamburg.gv.s2.ChangeSet;
+import de.hamburg.gv.s2.Station;
+
+public class ChangeSetChooser extends JDialog implements ActionListener, ItemListener, KeyListener {
 	
 	private static final long serialVersionUID = 1L;
-	Station[] station;
-	AbschnittsExportTeilerGUI jframe;
-	JComboBox<Abschnitt> absAlt;
-	JTextField absAltL, vst1, bst1, nnk2, vnk2, vst2, bst2;
-	JCheckBox gedreht;
+	private JComboBox<Abschnitt> absAlt;
+	private JTextField absAltL, vst1, bst1, nnk2, vnk2, vst2, bst2;
+	private JCheckBox gedreht;
+	private AetKontrolle kontroll;
 
-	public TransAdder(AbschnittsExportTeilerGUI jframe, ArrayList<Abschnitt> abschn) {
+	public ChangeSetChooser(AetGUI jframe, AetKontrolle kontroll) {
 		super(jframe);
-		this.jframe = jframe;
-		station = new Station[2];
+		this.kontroll = kontroll;
+
 		Container dcp = this.getContentPane();
 		GroupLayout layout = new GroupLayout(dcp);
 		dcp.setLayout(layout);
@@ -71,7 +72,7 @@ public class TransAdder extends JDialog implements ActionListener, ItemListener,
 		//bst2.addKeyListener(this);
 		//bst2.setEditable(false);
 
-		for (Abschnitt abs : abschn) {
+		for (Abschnitt abs : kontroll.getAbschnitte()) {
 			absAlt.addItem(abs);
 		}
 		JButton jb = new JButton("hinzufügen");
@@ -101,61 +102,25 @@ public class TransAdder extends JDialog implements ActionListener, ItemListener,
 		this.setVisible(true);
 	}
 
-	public Station[] getStation() {
-		return station;
-	}
-
 	@Override
-	public void actionPerformed(ActionEvent arg0) {
-		// TODO Auto-generated method stub
-		station[0] = pruefeEingabe((Abschnitt) absAlt.getSelectedItem(), vst1.getText(), bst1.getText());
-		station[1] = pruefeEingabe(vnk2.getText(), nnk2.getText(), vst2.getText(), bst2.getText(), gedreht.isSelected());
-		jframe.addTransBack(station);
+	public void actionPerformed(ActionEvent ae) {
+		ChangeSet changeset = new ChangeSet();
+		changeset.setAlt(Station.fromString((Abschnitt) absAlt.getSelectedItem(), vst1.getText(), bst1.getText()));
+		changeset.setNeu(Station.fromString(vnk2.getText(), nnk2.getText(), vst2.getText(), bst2.getText()));
+		changeset.setGedreht(gedreht.isSelected());
+		kontroll.getChangeSetDB().addSimple(changeset);
 	}
 	
-	public static Station pruefeEingabe(String vnk, String nnk, String vst, String bst) throws NumberFormatException {
-		return pruefeEingabe(vnk, nnk, vst, bst, false);
-	}
 
-	public static Station pruefeEingabe(String vnk, String nnk, String vst, String bst, boolean gedreht) throws NumberFormatException {
-		Abschnitt abschnitt = new Abschnitt();
-		abschnitt.setVNK(vnk);
-		abschnitt.setNNK(nnk);
-		return pruefeEingabe(abschnitt, vst, bst, gedreht);
-	}
-
-	public static Station pruefeEingabe(Abschnitt abschnitt, String vst, String bst) throws NumberFormatException {
-		return pruefeEingabe(abschnitt, vst, bst, false);
-	}
-	
-	public static Station pruefeEingabe(Abschnitt abschnitt, String vst, String bst, boolean gedreht) throws NumberFormatException {
-		Station station = new Station(abschnitt);
-		try {
-			int newVst = Integer.parseInt(vst);
-			station.setVST(newVst);
-		} catch (Exception e) {
-			
-		}
-		try {
-			int newBst = Integer.parseInt(bst);
-			station.setBST(newBst);
-		} catch (Exception e) {
-			
-		}
-		station.setDrehung(gedreht);
-		return station;
-	}
 
 	@Override
 	public void itemStateChanged(ItemEvent de) {
-		// TODO Auto-generated method stub
 		absAltL.setText("" + (((Abschnitt) absAlt.getSelectedItem()).getLEN()));
 	}
 
 	public void textFieldChanged() {
-		// TODO Auto-generated method stub
 		try {
-			Station st = pruefeEingabe((Abschnitt) absAlt.getSelectedItem(), vst1.getText(), bst1.getText());
+			Station st = Station.fromString((Abschnitt) absAlt.getSelectedItem(), vst1.getText(), bst1.getText());
 			vst1.setText("" + st.getVST());
 			bst1.setText("" + st.getBST());
 			bst2.setText("" + (Integer.parseInt(vst2.getText()) + st.getBST() - st.getVST()));
@@ -169,7 +134,6 @@ public class TransAdder extends JDialog implements ActionListener, ItemListener,
 
 	@Override
 	public void keyPressed(KeyEvent arg0) {
-		// TODO Auto-generated method stub
 		
 	}
 
@@ -185,7 +149,7 @@ public class TransAdder extends JDialog implements ActionListener, ItemListener,
 
 	@Override
 	public void keyTyped(KeyEvent arg0) {
-		// TODO Auto-generated method stub
+
 		
 	}
 }

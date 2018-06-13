@@ -14,7 +14,6 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -25,13 +24,17 @@ import com.linuxense.javadbf.DBFField;
 import com.linuxense.javadbf.DBFReader;
 import com.linuxense.javadbf.DBFWriter;
 
-public class AETWorker {
-	AbschnittsExportTeilerGUI aet;
-	int geschDatei = 0;
-	Connection dreher;
+import de.hamburg.gv.s2.ChangeSet;
+import de.hamburg.gv.s2.ChangeSetDB;
+import de.hamburg.gv.s2.Netzknoten;
 
-	public AETWorker(AbschnittsExportTeilerGUI aet) {
-		this.aet = aet;
+public class AetWorker {
+	private AetListener gui;
+	private int geschDatei = 0;
+	private Connection dreher;
+
+	public AetWorker(AetListener gui) {
+		this.gui = gui;
 		dreher = loadDreher();
 	}
 
@@ -43,7 +46,7 @@ public class AETWorker {
 				Files.copy(datei.toPath(), Paths.get(export + "\\" + datei.getName()));
 				geschDatei++;
 			} catch (IOException e) {
-				aet.log(e);
+				gui.showTextLine(e.getMessage());
 			}
 		}
 	}
@@ -56,14 +59,14 @@ public class AETWorker {
 		}
 	}
 
-	public void export(File exportF, File[] dateienS, ArrayList<Station[]> zuAendern, File[] dateien, File dbabschnF) {
+	public void export(File exportF, File[] dateienS, ChangeSetDB changes, File[] dateien, File dbabschnF) {
 		String export = exportF.getAbsolutePath();
 
 		createExportPath(exportF);
 		copyFilesEtc(export, dateienS);
 
 		// Änderungsdatensätze zählen
-		int anzZuAendern = zuAendern.size();
+		int anzZuAendern = changes.size();
 
 		// Jede Datei durchgehen
 		for (int i = 0; i < dateien.length; i++) {
@@ -90,8 +93,8 @@ public class AETWorker {
 					// VNK/NNK/VST/BST gefüllt?
 					if (spalten.length > 3 && spalten[0] != null && spalten[1] != null && spalten[2] != null) {
 
-						String vnkA = ((String) spalten[0]).trim();
-						String nnkA = ((String) spalten[1]).trim();
+						Netzknoten vnkA = new Netzknoten(((String) spalten[0]).trim());
+						Netzknoten nnkA = new Netzknoten(((String) spalten[1]).trim());
 						int vstA = ((BigDecimal) spalten[2]).intValue();
 						int bstA = ((BigDecimal) spalten[3]).intValue();
 						// System.out.print("\n" + vnkA + "\t" + nnkA + "\t" +
@@ -99,23 +102,23 @@ public class AETWorker {
 
 						// jeder Änderungsdatensatz
 						for (int j = 0; j < anzZuAendern; j++) {
-							Station[] aenderung = zuAendern.get(j);
-							String vnkN = aenderung[0].getABS().getVNK();
-							String nnkN = aenderung[0].getABS().getNNK();
+							ChangeSet aenderung = changes.get(j);
+							Netzknoten vnkN = aenderung.getAlt().getABS().getVNK();
+							Netzknoten nnkN = aenderung.getAlt().getABS().getNNK();
 
 							// VNK/NNK gleich?
 							if (vnkA.equals(vnkN) && nnkA.equals(nnkN)) {
 								schonDrin = true;
-								int vstN = aenderung[0].getVST();
-								int bstN = aenderung[0].getBST();
+								int vstN = aenderung.getAlt().getVST();
+								int bstN = aenderung.getAlt().getBST();
 
-								String vnkE = aenderung[1].getABS().getVNK();
-								String nnkE = aenderung[1].getABS().getNNK();
+								Netzknoten vnkE = aenderung.getNeu().getABS().getVNK();
+								Netzknoten nnkE = aenderung.getNeu().getABS().getNNK();
 
-								int vstE = aenderung[1].getVST();
-								int bstE = aenderung[1].getBST();
+								int vstE = aenderung.getNeu().getVST();
+								int bstE = aenderung.getNeu().getBST();
 
-								boolean gedreht = aenderung[1].getDrehung();
+								boolean gedreht = aenderung.isGedreht();
 
 								Object[] eintrag = null;
 								if (bstA != vstA) {
@@ -193,7 +196,7 @@ public class AETWorker {
 				reader.close();
 				geschDatei++;
 			} catch (Exception e) {
-				aet.log(e);
+				gui.showTextLine(e.getMessage());
 			}
 		}
 		// System.out.println("DBXXXXX erfolgreich bearbeitet");
@@ -224,16 +227,16 @@ public class AETWorker {
 
 			for (int j = 0; j < anzZuAendern; j++) {
 				// System.out.println("0");
-				Station[] aenderung = zuAendern.get(j);
-				String key = aenderung[0].getABS().getVNK() + " " + aenderung[0].getABS().getNNK();
+				ChangeSet aenderung = changes.get(j);
+				String key = aenderung.getAlt().getABS().getVNK() + " " + aenderung.getAlt().getABS().getNNK();
 				// System.out.println(key);
 				if (dbab_org.containsKey(key)) {
 					// System.out.println("1");
 					// Object[] rec = dbab.get(key);
 					dbab_alt.remove(key);
-					String vnk = aenderung[1].getABS().getVNK();
-					String nnk = aenderung[1].getABS().getNNK();
-					double len = aenderung[1].getBST();
+					Netzknoten vnk = aenderung.getNeu().getABS().getVNK();
+					Netzknoten nnk = aenderung.getNeu().getABS().getNNK();
+					double len = aenderung.getNeu().getBST();
 					String key2 = vnk + " " + nnk;
 					if (dbab_neu.containsKey(key2)) {
 						// System.out.println("2");
@@ -275,16 +278,16 @@ public class AETWorker {
 			dbabschnW.close();
 			dbabschnR.close();
 		} catch (Exception e) {
-			aet.log(e);
+			gui.showTextLine(e.getMessage());
 		}
 
 		JOptionPane.showMessageDialog(null,
 				"Es wurden " + geschDatei + " Dateien erfolgreich in " + export + " geschrieben!");
 	}
 
-	private Object[] changeStation(Object[] spalten, String vnk, String nnk, int vst, int bst) {
-		spalten[0] = vnk.trim();
-		spalten[1] = nnk.trim();
+	private Object[] changeStation(Object[] spalten, Netzknoten vnkE, Netzknoten nnkE, int vst, int bst) {
+		spalten[0] = vnkE.toString();
+		spalten[1] = nnkE.toString();
 		spalten[2] = (double) vst;
 		spalten[3] = (double) bst;
 		// System.out.print(vnk + " " + nnk + " " + vst + " " + bst);
@@ -314,9 +317,7 @@ public class AETWorker {
 
 			try (BufferedReader br = new BufferedReader(new FileReader(transformationFile))) {
 				String[] z_vorlage = new String[6];
-				for (String ze : z_vorlage) {
-					ze = "";
-				}
+
 				while ((zeile = br.readLine()) != null) {
 
 					// use comma as separator
@@ -412,7 +413,6 @@ public class AETWorker {
 				}
 			}
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
