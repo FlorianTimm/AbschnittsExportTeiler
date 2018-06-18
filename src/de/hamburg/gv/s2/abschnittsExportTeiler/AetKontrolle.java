@@ -6,7 +6,9 @@ import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import javax.swing.table.TableModel;
@@ -20,35 +22,35 @@ import de.hamburg.gv.s2.ChangeSetDB;
 public class AetKontrolle implements Runnable {
 	private ChangeSetDB changes;
 	private File exportFolder;
-	private File[] dateien = null, dateienS = null;
+	private List<File> dateienObj = null, dateienEtc = null;
 	private AetListener gui;
 	private File dbabschnF = null;
-	private ArrayList<Abschnitt> abschn;
+	private ArrayList<Abschnitt> abschnitte;
 
 	public AetKontrolle(AetListener gui) {
 		this.gui = gui;
-		abschn = new ArrayList<Abschnitt>();
+		abschnitte = new ArrayList<Abschnitt>();
 		changes = new ChangeSetDB();
 	}
 
 	public boolean setFolder(File folder) {
-		dateien = folder.listFiles(new FilenameFilter() {
+		dateienObj = Arrays.asList(folder.listFiles(new FilenameFilter() {
 			@Override
 			public boolean accept(File dir, String name) {
 				return Pattern.matches("(DB)\\d{6}\\.((DBF)|(dbf))", name);
 			}
-		});
+		}));
 
-		dateienS = folder.listFiles(new FilenameFilter() {
+		dateienEtc = Arrays.asList(folder.listFiles(new FilenameFilter() {
 			@Override
 			public boolean accept(File dir, String name) {
 				return Pattern.matches("(DB)((OBJDEF)|(OBJEKT))\\.((DBF)|(dbf))", name);
 			}
-		});
+		}));
 
 		dbabschnF = new File(folder + "\\DBABSCHN.DBF");
 		if (dbabschnF.exists()) {
-			abschn.clear();
+			abschnitte.clear();
 			try {
 				DBFReader dbabschn = new DBFReader(new FileInputStream(dbabschnF));
 
@@ -59,11 +61,11 @@ public class AetKontrolle implements Runnable {
 						BigDecimal bd = (BigDecimal) spalten[2];
 						Abschnitt abs = new Abschnitt((String) spalten[0], (String) spalten[1],
 								(int) bd.intValueExact());
-						abschn.add(abs);
+						abschnitte.add(abs);
 						//System.out.println(spalten[0] + " " + spalten[1] + " " + abs.toString());
 					}
 				}
-				Collections.sort(abschn);
+				Collections.sort(abschnitte);
 				gui.activateButtons();
 				dbabschn.close();
 
@@ -73,20 +75,14 @@ public class AetKontrolle implements Runnable {
 				e1.printStackTrace();
 			}
 
-			for (int i = 0; i < dateien.length; i++) {
-
-				File file = dateien[i];
-
-				if (i > 0) {
-					gui.showTextLine("\n");
-				}
+			for (int i = 0; i < dateienObj.size(); i++) {
+				File file = dateienObj.get(i);
 				gui.showTextLine(file.getName());
 				System.out.println(file.getName());
-
 			}
-			for (File datei : dateienS) {
+			for (File datei : dateienEtc) {
 				System.out.println(datei.getName());
-				gui.showTextLine("\n" + datei.getName());
+				gui.showTextLine(datei.getName());
 			}
 		} else {
 			gui.showMessage("Der Ordner enthält keine DBABSCHNITT, die Import-Daten sind ungültig!");
@@ -98,7 +94,12 @@ public class AetKontrolle implements Runnable {
 
 	public void export() {
 		AetWorker w = new AetWorker(gui);
-		w.export(exportFolder, dateienS, changes, dateien, dbabschnF);
+		w.setChanges(changes);
+		w.setDateienEtc(dateienEtc);
+		w.setDateienObj(dateienObj);
+		w.setExportFolder(exportFolder);
+		w.setDbabschnFile(dbabschnF);
+		w.export();
 	}
 
 	public boolean check() {
@@ -111,7 +112,7 @@ public class AetKontrolle implements Runnable {
 	}
 
 	public ArrayList<Abschnitt> getAbschnitte() {
-		return abschn;
+		return abschnitte;
 	}
 
 	public void setExportFolder(File selectedFile) {
@@ -123,7 +124,6 @@ public class AetKontrolle implements Runnable {
 	}
 
 	public ChangeSetDB getChangeSetDB() {
-		// TODO Auto-generated method stub
 		return changes;
 	}
 }

@@ -95,18 +95,15 @@ public class AetGUI extends JFrame implements ActionListener, AetListener, KeyLi
 		transTable = new JTable(kontroll.getTableModell());
 		JScrollPane jsp2 = new JScrollPane(transTable);
 		unten.add(jsp2, BorderLayout.CENTER);
-		
-		
-	
-		
+
 		JPanel rechtsPanel = new JPanel();
 		rechtsPanel.setLayout(new GridLayout(2, 1));
 		unten.add(rechtsPanel, BorderLayout.EAST);
-		
+
 		exportT = new JButton("export");
 		Font lvButtonFont = exportT.getFont();
 		AffineTransform at = new AffineTransform();
-		at.rotate(-1.57d);	
+		at.rotate(-1.57d);
 		exportT.setActionCommand("exportT");
 		exportT.addActionListener(this);
 		exportT.setFont(lvButtonFont.deriveFont(at));
@@ -124,7 +121,7 @@ public class AetGUI extends JFrame implements ActionListener, AetListener, KeyLi
 		JPanel imexportT = new JPanel();
 		imexportT.setLayout(new GridLayout(2, 1));
 		unten.add(imexportT, BorderLayout.WEST);
-		
+
 		importDB = new JButton("...von DB");
 		importDB.setActionCommand("importDB");
 		importDB.addActionListener(this);
@@ -197,6 +194,7 @@ public class AetGUI extends JFrame implements ActionListener, AetListener, KeyLi
 			if (!kontroll.check()) {
 				showMessage("Es sind noch keine gültigen Eingabe- und/oder Ausgabeordner gewählt!");
 			} else {
+				kontroll.setExportFolder(new File(jtf.getText()));
 				kontroll.export();
 			}
 			break;
@@ -224,7 +222,7 @@ public class AetGUI extends JFrame implements ActionListener, AetListener, KeyLi
 
 		if (ok == JFileChooser.APPROVE_OPTION) {
 			System.out.println(jfc.getSelectedFile());
-			jfc.getSelectedFile();
+			kontroll.getChangeSetDB().saveToFile(jfc.getSelectedFile());
 		}
 	}
 
@@ -247,8 +245,7 @@ public class AetGUI extends JFrame implements ActionListener, AetListener, KeyLi
 
 	@Override
 	public void showTextLine(String zeile) {
-		// TODO Auto-generated method stub
-
+		jta.append(zeile + "\n");
 	}
 
 	public void activateButtons() {
@@ -256,7 +253,7 @@ public class AetGUI extends JFrame implements ActionListener, AetListener, KeyLi
 		export.setEnabled(true);
 		importT.setEnabled(true);
 		exportT.setEnabled(true);
-		//importDB.setEnabled(true);
+		// importDB.setEnabled(true);
 	}
 
 	@Override

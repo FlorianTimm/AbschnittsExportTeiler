@@ -12,6 +12,7 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 
@@ -27,7 +28,7 @@ public class ChangeSetChooser extends JDialog implements ActionListener, ItemLis
 	private JCheckBox gedreht;
 	private AetKontrolle kontroll;
 
-	public ChangeSetChooser(AetGUI jframe, AetKontrolle kontroll) {
+	public ChangeSetChooser(JFrame jframe, AetKontrolle kontroll) {
 		super(jframe);
 		this.kontroll = kontroll;
 
