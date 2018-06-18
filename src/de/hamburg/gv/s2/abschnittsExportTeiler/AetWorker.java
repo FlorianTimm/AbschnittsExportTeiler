@@ -30,7 +30,7 @@ import de.hamburg.gv.s2.ChangeSet;
 import de.hamburg.gv.s2.ChangeSetDB;
 import de.hamburg.gv.s2.Netzknoten;
 
-public class AetWorker {
+public class AetWorker implements Runnable {
 	private AetListener gui;
 	private int filesWriten = 0;
 	private Connection dreher;
@@ -83,11 +83,11 @@ public class AetWorker {
 				dateienEtc.add(datei);
 			}
 		}
-		
+
 		// Sonstige Dateien kopieren
 		copyFilesEtc(export, dateienEtc);
-		
-		// System.out.println("DBXXXXX erfolgreich bearbeitet");
+
+		// gui.showTextLine("DBXXXXX erfolgreich bearbeitet");
 		writeAbschnittFile();
 
 		JOptionPane.showMessageDialog(null,
@@ -98,18 +98,18 @@ public class AetWorker {
 		DBFReader dbabschnR = null;
 		DBFWriter dbabschnW = null;
 		try {
-			// System.out.println("DBABSCHN kopieren:");
+			// gui.showTextLine("DBABSCHN kopieren:");
 			dbabschnR = new DBFReader(new FileInputStream(dbabschnFile));
 			dbabschnW = new DBFWriter(new File(exportFolder.getAbsolutePath() + "//" + dbabschnFile.getName()));
-			// System.out.println("DBABSCHN eingelesen");
+			// gui.showTextLine("DBABSCHN eingelesen");
 			int felderAnz = dbabschnR.getFieldCount();
 			DBFField felder[] = new DBFField[felderAnz];
-			// System.out.println("DBABSCHN-Felder eingelesen");
+			// gui.showTextLine("DBABSCHN-Felder eingelesen");
 			for (int j = 0; j < felderAnz; j++) {
 				felder[j] = dbabschnR.getField(j);
 			}
 			dbabschnW.setFields(felder);
-			// System.out.println("Felder kopiert");
+			// gui.showTextLine("Felder kopiert");
 
 			Map<String, Object[]> dbab_alt = new HashMap<String, Object[]>();
 			Map<String, Object[]> dbab_org = new HashMap<String, Object[]>();
@@ -117,18 +117,19 @@ public class AetWorker {
 			Object[] spalten;
 			while ((spalten = dbabschnR.nextRecord()) != null) {
 				String key = ((String) spalten[0]).trim() + " " + ((String) spalten[1]).trim();
-				// System.out.println(key);
+				// gui.showTextLine(key);
 				dbab_org.put(key, spalten);
 				dbab_alt.put(key, spalten);
 			}
 
 			for (int j = 0; j < changes.size(); j++) {
-				// System.out.println("0");
+				// gui.showTextLine("0");
 				ChangeSet aenderung = changes.get(j);
 				String key = aenderung.getAlt().getABS().getVNK() + " " + aenderung.getAlt().getABS().getNNK();
-				// System.out.println(key);
+				// gui.showTextLine(key);
 				if (dbab_org.containsKey(key)) {
-					// System.out.println("1");
+					//TODO Löschen implementieren
+					// gui.showTextLine("1");
 					// Object[] rec = dbab.get(key);
 					dbab_alt.remove(key);
 					Netzknoten vnk = aenderung.getNeu().getABS().getVNK();
@@ -136,14 +137,14 @@ public class AetWorker {
 					double len = aenderung.getNeu().getBST();
 					String key2 = vnk.toString() + " " + nnk.toString();
 					if (dbab_neu.containsKey(key2)) {
-						// System.out.println("2");
+						// gui.showTextLine("2");
 						if (len > (double) dbab_neu.get(key2)[2]) {
 							Object[] ch = dbab_neu.get(key2);
 							ch[2] = len;
 							dbab_neu.put(key2, ch);
 						}
 					} else if (dbab_alt.containsKey(key2)) {
-						// System.out.println("3");
+						// gui.showTextLine("3");
 						if (((BigDecimal) dbab_alt.get(key2)[2]).compareTo(new BigDecimal(len)) == -1) {
 							Object[] ch = dbab_alt.get(key2);
 							ch[2] = len;
@@ -152,7 +153,7 @@ public class AetWorker {
 						}
 
 					} else {
-						// System.out.println("4");
+						// gui.showTextLine("4");
 						Object[] entry = new Object[4];
 						entry[0] = vnk.toString();
 						entry[1] = nnk.toString();
@@ -167,14 +168,13 @@ public class AetWorker {
 			for (Entry<String, Object[]> z : dbab_neu.entrySet()) {
 				dbabschnW.addRecord(z.getValue());
 				// for (Object o : z.getValue()) {
-				// System.out.println(o);
-				// System.out.println(o.getClass().getName());
+				// gui.showTextLine(o);
+				// gui.showTextLine(o.getClass().getName());
 				// }
 			}
 			for (Entry<String, Object[]> z : dbab_alt.entrySet()) {
 				dbabschnW.addRecord(z.getValue());
 			}
-
 
 		} catch (Exception e) {
 			gui.showTextLine(e.getMessage());
@@ -189,7 +189,7 @@ public class AetWorker {
 
 	public boolean writeObjFile(File datei) {
 		int anzZuAendern = changes.size();
-		System.out.println("Bearbeite: " + datei.getName());
+		gui.showTextLine("Bearbeite: " + datei.getName());
 		try {
 			// Reader und Writer init.
 			InputStream inputStream = new FileInputStream(datei);
@@ -204,7 +204,6 @@ public class AetWorker {
 				return false;
 			}
 
-			
 			DBFWriter writer = new DBFWriter(new File(exportFolder.getAbsolutePath() + "\\" + datei.getName()));
 
 			// Felderdefinition der alten Datei kopieren
@@ -227,7 +226,8 @@ public class AetWorker {
 					Netzknoten nnkA = new Netzknoten(((String) spalten[1]).trim());
 					int vstA = ((BigDecimal) spalten[2]).intValue();
 					int bstA = ((BigDecimal) spalten[3]).intValue();
-					//System.out.print("\n" + vnkA + "\t" + nnkA + "\t" + vstA + "\t" + bstA + "\t->\t");
+					// System.out.print("\n" + vnkA + "\t" + nnkA + "\t" + vstA + "\t" + bstA +
+					// "\t->\t");
 
 					// jeder Änderungsdatensatz
 					for (int j = 0; j < anzZuAendern; j++) {
@@ -242,75 +242,82 @@ public class AetWorker {
 						if (!(vnkA.equals(vnkN) && nnkA.equals(nnkN))) {
 							continue;
 						}
-						//System.out.println("gefunden");
+						// gui.showTextLine("gefunden");
 						schonDrin = true;
 						int vstN = aenderung.getAlt().getVST();
 						int bstN = aenderung.getAlt().getBST();
 
-						Netzknoten vnkE = aenderung.getNeu().getABS().getVNK();
-						Netzknoten nnkE = aenderung.getNeu().getABS().getNNK();
-
-						int vstE = aenderung.getNeu().getVST();
-						int bstE = aenderung.getNeu().getBST();
-
-						boolean gedreht = aenderung.isGedreht();
-
-						Object[] eintrag = null;
-						if (bstA != vstA) {
-							// Streckenbezogene Objekte
-							if (vstN >= vstA && bstN <= bstA) {
-								// neuer Abschnitt vollständig in altem
-								// Attribut
-								int vst = vstE;
-								int bst = bstE; // = LEN
-								eintrag = changeStation(spalten.clone(), vnkE, nnkE, vst, bst);
-							} else if (vstN <= vstA && bstN >= bstA) {
-								// neuer Abschnitt beginnt vor altem
-								// Attribut und
-								// endet danach - Attribut vollständig
-								// umschlossen von neuem Abschnitt
-								double faktor = 1.0 * (bstE - vstE) / (bstN - vstN);
-								int vst = (int) Math.round(vstE + (vstA - vstN) * faktor);
-								int bst = (int) Math.round(vstE + (bstA - vstN) * faktor);
-								eintrag = changeStation(spalten.clone(), vnkE, nnkE, vst, bst);
-							} else if (vstN <= vstA && bstN < bstA && bstN > vstA) {
-								// neuer Abschnitt beginnt vorher und
-								// endet in altem Abschnitt
-								double faktor = 1.0 * (bstE - vstE) / (bstN - vstN);
-								int vst = (int) Math.round(vstE + (vstA - vstN) * faktor);
-								int bst = bstE; // = LEN
-								eintrag = changeStation(spalten.clone(), vnkE, nnkE, vst, bst);
-							} else if (vstN >= vstA && vstN <= bstA && bstN > bstA && bstA != vstN) {
-								// neuer Abschnitt beginnt in altem
-								// Abschnitt und endet danach
-								int vst = vstE;
-								double faktor = 1.0 * (bstE - vstE) / (bstN - vstN);
-								int bst = (int) Math.round(vstE + (bstA - vstN) * faktor);
-								eintrag = changeStation(spalten.clone(), vnkE, nnkE, vst, bst);
-							}
+						if (aenderung.getNeu() == null || aenderung.getNeu().getABS() == null) {
+							gui.showTextLine(aenderung.getAlt().toString() + " wird gelöscht!");
+							//TODO Löschen implementieren
 						} else {
-							// Punktuelle Objekte
-							int stA = vstA;
-							if (vstN < stA && bstN >= stA) {
-								// Punkt liegt in neuem Abschnitt (aber
-								// nicht an seinem Anfang)
-								double faktor = 1.0 * (bstE - vstE) / (bstN - vstN);
-								int st = (int) Math.round(vstE + (stA - vstN) * faktor);
-								// int st = vstE + stA - vstN;
-								eintrag = changeStation(spalten.clone(), vnkE, nnkE, st, st);
-							} else if (vstN == 0 && stA == 0) {
-								// neuer Abschnitt beginnt am Anfang des
-								// alten
-								int st = vstE;
-								eintrag = changeStation(spalten.clone(), vnkE, nnkE, st, st);
+							Netzknoten vnkE = aenderung.getNeu().getABS().getVNK();
+							Netzknoten nnkE = aenderung.getNeu().getABS().getNNK();
+
+							int vstE = aenderung.getNeu().getVST();
+							int bstE = aenderung.getNeu().getBST();
+
+							boolean gedreht = aenderung.isGedreht();
+
+							Object[] eintrag = null;
+							if (bstA != vstA) {
+								// Streckenbezogene Objekte
+								if (vstN >= vstA && bstN <= bstA) {
+									// neuer Abschnitt vollständig in altem
+									// Attribut
+									int vst = vstE;
+									int bst = bstE; // = LEN
+									eintrag = changeStation(spalten.clone(), vnkE, nnkE, vst, bst);
+								} else if (vstN <= vstA && bstN >= bstA) {
+									// neuer Abschnitt beginnt vor altem
+									// Attribut und
+									// endet danach - Attribut vollständig
+									// umschlossen von neuem Abschnitt
+									double faktor = 1.0 * (bstE - vstE) / (bstN - vstN);
+									int vst = (int) Math.round(vstE + (vstA - vstN) * faktor);
+									int bst = (int) Math.round(vstE + (bstA - vstN) * faktor);
+									eintrag = changeStation(spalten.clone(), vnkE, nnkE, vst, bst);
+								} else if (vstN <= vstA && bstN < bstA && bstN > vstA) {
+									// neuer Abschnitt beginnt vorher und
+									// endet in altem Abschnitt
+									double faktor = 1.0 * (bstE - vstE) / (bstN - vstN);
+									int vst = (int) Math.round(vstE + (vstA - vstN) * faktor);
+									int bst = bstE; // = LEN
+									eintrag = changeStation(spalten.clone(), vnkE, nnkE, vst, bst);
+								} else if (vstN >= vstA && vstN <= bstA && bstN > bstA && bstA != vstN) {
+									// neuer Abschnitt beginnt in altem
+									// Abschnitt und endet danach
+									int vst = vstE;
+									double faktor = 1.0 * (bstE - vstE) / (bstN - vstN);
+									int bst = (int) Math.round(vstE + (bstA - vstN) * faktor);
+									eintrag = changeStation(spalten.clone(), vnkE, nnkE, vst, bst);
+								}
+							} else {
+								// Punktuelle Objekte
+								int stA = vstA;
+								if (vstN < stA && bstN >= stA) {
+									// Punkt liegt in neuem Abschnitt (aber
+									// nicht an seinem Anfang)
+									double faktor = 1.0 * (bstE - vstE) / (bstN - vstN);
+									int st = (int) Math.round(vstE + (stA - vstN) * faktor);
+									// int st = vstE + stA - vstN;
+									eintrag = changeStation(spalten.clone(), vnkE, nnkE, st, st);
+								} else if (vstN == 0 && stA == 0) {
+									// neuer Abschnitt beginnt am Anfang des
+									// alten
+									int st = vstE;
+									eintrag = changeStation(spalten.clone(), vnkE, nnkE, st, st);
+								}
 							}
-						}
-						if (eintrag != null) {
-							if (gedreht) {
-								System.out.println("Abschnitt wird gedreht");
-								eintrag = wendeAbschnitt(eintrag, felder, datei.getName(), bstE);
+							if (eintrag != null) {
+								if (gedreht) {
+									gui.showTextLine("Abschnitt wird gedreht");
+									eintrag = wendeAbschnitt(eintrag, felder, datei.getName(), bstE);
+								}
+								writer.addRecord(eintrag);
+								//TODO: schonDrin prüfen
+								schonDrin = true;
 							}
-							writer.addRecord(eintrag);
 						}
 					}
 				}
@@ -325,52 +332,54 @@ public class AetWorker {
 
 			}
 
-			// System.out.println("Speichere nach: " + export + "\\" +
+			// gui.showTextLine("Speichere nach: " + export + "\\" +
 			// dateien[i].getName());
 			writer.close();
 			reader.close();
 			filesWriten++;
 			return true;
 		} catch (Exception e) {
-			//gui.showTextLine(e.getLocalizedMessage());
+			// gui.showTextLine(e.getLocalizedMessage());
 			e.printStackTrace();
 			return false;
 		}
 	}
 
 	/**
-	 * @param exportFolder the exportFolder to set
+	 * @param exportFolder
+	 *            the exportFolder to set
 	 */
 	public void setExportFolder(File exportFolder) {
 		this.exportFolder = exportFolder;
 	}
 
-
 	/**
-	 * @param dateienEtc the dateienEtc to set
+	 * @param dateienEtc
+	 *            the dateienEtc to set
 	 */
 	public void setDateienEtc(List<File> dateienEtc) {
 		this.dateienEtc = dateienEtc;
 	}
 
-
 	/**
-	 * @param changes the changes to set
+	 * @param changes
+	 *            the changes to set
 	 */
 	public void setChanges(ChangeSetDB changes) {
 		this.changes = changes;
 	}
 
-
 	/**
-	 * @param dateienObj the dateienObj to set
+	 * @param dateienObj
+	 *            the dateienObj to set
 	 */
 	public void setDateienObj(List<File> dateienObj) {
 		this.dateienObj = dateienObj;
 	}
 
 	/**
-	 * @param dbabschnFile the dbabschnFile to set
+	 * @param dbabschnFile
+	 *            the dbabschnFile to set
 	 */
 	public void setDbabschnFile(File dbabschnFile) {
 		this.dbabschnFile = dbabschnFile;
@@ -445,7 +454,7 @@ public class AetWorker {
 			}
 			t = t.substring(0, t.length() - 1) + ";";
 
-			System.out.println(t);
+			gui.showTextLine(t);
 
 			stmt.executeUpdate(t);
 
@@ -472,11 +481,11 @@ public class AetWorker {
 		Object[] result = spalten.clone();
 		try {
 			Statement stmt = dreher.createStatement();
-			System.out.println(db);
+			gui.showTextLine(db);
 			ResultSet rs = stmt.executeQuery("SELECT * FROM transformation WHERE obj = '" + db + "';");
 			while (rs.next()) {
 				String feld = rs.getString("feld");
-				System.out.println(feld);
+				gui.showTextLine(feld);
 				for (int i = 0; i < felder.length; i++) {
 					if (feld.equals(felder[i].getName())) {
 						if (rs.getString("kt_von").length() > 0) {
@@ -486,11 +495,10 @@ public class AetWorker {
 											+ "' and aus = '" + getFeld(spalten, felder, kt_von) + "';");
 							rs2.next();
 							result[i] = rs2.getString("wird");
-							System.out.println(rs2.getString("wird"));
 						} else if (rs.getString("negativ").length() > 0) {
 							Object obj;
 							if ((obj = getFeld(spalten, felder, rs.getString("negativ"))) != null) {
-								result[i] = -(Double) obj;
+								result[i] = -((BigDecimal) obj).doubleValue();
 							}
 
 						} else if (rs.getString("positiv").length() > 0) {
@@ -508,6 +516,11 @@ public class AetWorker {
 		}
 
 		return result;
+	}
+
+	@Override
+	public void run() {
+		this.export();
 	}
 
 }

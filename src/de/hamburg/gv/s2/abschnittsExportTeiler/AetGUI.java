@@ -135,7 +135,6 @@ public class AetGUI extends JFrame implements ActionListener, AetListener, KeyLi
 		importT.addActionListener(this);
 		importT.setFont(lvButtonFont.deriveFont(at));
 		importT.setVerticalAlignment(SwingConstants.BOTTOM);
-		importT.setEnabled(false);
 		imexportT.add(importT);
 
 		export = new JButton("Export");
@@ -251,7 +250,6 @@ public class AetGUI extends JFrame implements ActionListener, AetListener, KeyLi
 	public void activateButtons() {
 		trans.setEnabled(true);
 		export.setEnabled(true);
-		importT.setEnabled(true);
 		exportT.setEnabled(true);
 		// importDB.setEnabled(true);
 	}
@@ -294,8 +292,6 @@ public class AetGUI extends JFrame implements ActionListener, AetListener, KeyLi
 
 	@Override
 	public void keyPressed(KeyEvent arg0) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
@@ -306,7 +302,6 @@ public class AetGUI extends JFrame implements ActionListener, AetListener, KeyLi
 
 	@Override
 	public void keyTyped(KeyEvent arg0) {
-		// TODO Auto-generated method stub
 
 	}
 

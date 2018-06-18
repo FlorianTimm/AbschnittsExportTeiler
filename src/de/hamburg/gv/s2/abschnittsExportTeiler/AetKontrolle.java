@@ -19,7 +19,7 @@ import com.linuxense.javadbf.DBFReader;
 import de.hamburg.gv.s2.Abschnitt;
 import de.hamburg.gv.s2.ChangeSetDB;
 
-public class AetKontrolle implements Runnable {
+public class AetKontrolle {
 	private ChangeSetDB changes;
 	private File exportFolder;
 	private List<File> dateienObj = null, dateienEtc = null;
@@ -99,16 +99,12 @@ public class AetKontrolle implements Runnable {
 		w.setDateienObj(dateienObj);
 		w.setExportFolder(exportFolder);
 		w.setDbabschnFile(dbabschnF);
-		w.export();
+		Thread t = new Thread(w);
+		t.run();
 	}
 
 	public boolean check() {
 		return dbabschnF.exists();
-	}
-
-	@Override
-	public void run() {
-		// TODO Auto-generated method stub
 	}
 
 	public ArrayList<Abschnitt> getAbschnitte() {
